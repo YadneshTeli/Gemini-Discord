@@ -71,6 +71,24 @@ function speechGen(prompt, language) {
       case 'Japanese':
         x = y = 'JP';
         break;
+      case 'German':
+        x = y = 'DE';
+        break;
+      case 'Italian':
+        x = y = 'IT';
+        break;
+      case 'Portuguese':
+        x = y = 'PT';
+        break;
+      case 'Russian':
+        x = y = 'RU';
+        break;
+      case 'Hindi':
+        x = y = 'HI';
+        break;
+      case 'Arabic':
+        x = y = 'AR';
+        break;
       default:
         x = 'EN';
         y = 'EN-Default';
