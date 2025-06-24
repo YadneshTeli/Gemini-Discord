@@ -52,32 +52,39 @@ const commands = [
     "name": "server_settings",
     "description": "Opens Up The Server Settings."
   },
-  {
-    "name": "speech",
-    "description": "Generate speech from text.",
-    "options": [
-      {
-        "type": 3,
-        "name": "language",
-        "description": "The language to use.",
-        "required": true,
-        "choices": [
-          { "name": "English", "value": "English" },
-          { "name": "Spanish", "value": "Spanish" },
-          { "name": "French", "value": "French" },
-          { "name": "Chinese", "value": "Chinese" },
-          { "name": "Korean", "value": "Korean" },
-          { "name": "Japanese", "value": "Japanese" }
-        ]
-      },
-      {
-        "type": 3,
-        "name": "prompt",
-        "description": "The text prompt to generate the speech from.",
-        "required": true
-      }
-    ]
-  },
+{
+  "name": "speech",
+  "description": "Generate speech from text.",
+  "options": [
+    {
+      "type": 3,
+      "name": "language",
+      "description": "The language to use.",
+      "required": true,
+      "choices": [
+        { "name": "English", "value": "English" },
+        { "name": "Spanish", "value": "Spanish" },
+        { "name": "French", "value": "French" },
+        { "name": "Chinese", "value": "Chinese" },
+        { "name": "Korean", "value": "Korean" },
+        { "name": "Japanese", "value": "Japanese" },
+        { "name": "German", "value": "German" },
+        { "name": "Italian", "value": "Italian" },
+        { "name": "Portuguese", "value": "Portuguese" },
+        { "name": "Russian", "value": "Russian" },
+        { "name": "Hindi", "value": "Hindi" },
+        { "name": "Arabic", "value": "Arabic" }
+      ]
+    },
+    {
+      "type": 3,
+      "name": "prompt",
+      "description": "The text prompt to generate the speech from.",
+      "required": true
+    }
+  ]
+},
+
   {
     "name": "music",
     "description": "Generate a music based on a prompt.",
@@ -113,6 +120,10 @@ const commands = [
         "required": true
       }
     ]
+  },
+  {
+    "name": "help",
+    "description": "Displays a list of available commands."
   },
   {
     "name": "status",

@@ -46,7 +46,6 @@ async function enhancePrompt1(prompt) {
           headers['Authorization'] = `Bearer ${process.env.OPENAI_API_KEY}`;
         }
 
-
         const baseURL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
         axios.post(`${baseURL}/chat/completions`, payload, { headers: headers })
           .then(response => {
