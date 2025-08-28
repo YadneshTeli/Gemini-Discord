@@ -1678,7 +1678,7 @@ async function handleStatusCommand(interaction) {
       .setDescription('Fetching system information...')
       .setTimestamp();
 
-    const message = await interaction.reply({ embeds: [initialEmbed], fetchReply: true });
+    const message = await interaction.reply({ embeds: [initialEmbed], withResponse: true });
     await addSettingsButton(message);
 
     const updateMessage = async () => {
