@@ -383,6 +383,7 @@ async function handleCommandInteraction(interaction) {
     whitelist: handleWhitelistCommand,
     blacklist: handleBlacklistCommand,
     imagine: handleImagineCommand,
+    edit: handleEditCommand,
     clear_memory: handleClearMemoryCommand,
     speech: handleSpeechCommand,
     settings: showSettings,
@@ -852,6 +853,59 @@ async function handleImagineCommand(interaction) {
       userPreferredImageResolution[interaction.user.id] = resolution;
     }
     await genimgslash(prompt, model, interaction);
+  } catch (error) {
+    console.log(error.message);
+  }
+}
+
+async function handleEditCommand(interaction) {
+  try {
+    if (!workInDMs && interaction.channel.type === ChannelType.DM) {
+      const embed = new EmbedBuilder()
+        .setColor(hexColour)
+        .setTitle('DMs Disabled')
+        .setDescription('DM interactions are disabled for this bot.');
+      return interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
+    }
+    if (interaction.guild) {
+      initializeBlacklistForGuild(interaction.guild.id);
+      if (blacklistedUsers[interaction.guild.id].includes(interaction.user.id)) {
+        const embed = new EmbedBuilder()
+          .setColor(hexColour)
+          .setTitle('Blacklisted')
+          .setDescription('You are blacklisted and cannot use this interaction.');
+        return interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
+      }
+    }
+    
+    const image = interaction.options.getAttachment('image');
+    const instructions = interaction.options.getString('instructions');
+    
+    // Validate image
+    if (!image.contentType || !image.contentType.startsWith('image/')) {
+      const embed = new EmbedBuilder()
+        .setColor(0xFF0000)
+        .setTitle('Invalid File')
+        .setDescription('Please upload a valid image file (PNG, JPG, WEBP, etc.).');
+      return interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
+    }
+    
+    const embed = new EmbedBuilder()
+      .setColor(0x00FFFF)
+      .setTitle('Analyzing Image')
+      .setDescription(`Analyzing your image and applying edits... 🎨`);
+    await interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
+    
+    try {
+      await editImageWithAI(image.url, instructions, interaction);
+    } catch (error) {
+      console.log(error);
+      const errorEmbed = new EmbedBuilder()
+        .setColor(0xFF0000)
+        .setTitle('Error')
+        .setDescription(`Sorry, could not edit the image. Please try again later.\n> **Instructions:**\n\`\`\`\n${instructions.length > 3900 ? instructions.substring(0, 3900) + '...' : instructions}\n\`\`\``);
+      await interaction.channel.send({ content: `${interaction.user}`, embeds: [errorEmbed] });
+    }
   } catch (error) {
     console.log(error.message);
   }
@@ -1467,6 +1521,81 @@ async function togglePromptEnhancer(interaction) {
     await interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
   } catch (error) {
     console.error(`Error toggling Prompt Enhancer: ${error.message}`);
+  }
+}
+
+async function editImageWithAI(imageUrl, instructions, interaction) {
+  try {
+    // Download the image
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBuffer = Buffer.from(response.data);
+    const mimeType = response.headers['content-type'];
+    
+    // Use Gemini Vision to analyze the image and generate a detailed prompt
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    const analysisPrompt = `Analyze this image in detail and create a comprehensive description. Then, based on the user's edit instructions: "${instructions}", generate a new detailed image generation prompt that incorporates the requested changes while maintaining the essence of the original image.
+
+Format your response as:
+DESCRIPTION: [detailed description of the original image]
+NEW_PROMPT: [the new image generation prompt with the requested edits applied]`;
+
+    const imagePart = {
+      inlineData: {
+        data: imageBuffer.toString('base64'),
+        mimeType: mimeType
+      }
+    };
+    
+    const result = await model.generateContent([analysisPrompt, imagePart]);
+    const analysisText = result.response.text();
+    
+    // Extract the NEW_PROMPT from the response
+    const promptMatch = analysisText.match(/NEW_PROMPT:\s*(.+?)(?=\n\n|$)/s);
+    const newPrompt = promptMatch ? promptMatch[1].trim() : instructions;
+    
+    // Generate the edited image using the new prompt
+    const { imageResult, enhancedPrompt } = await generateImageWithPrompt(newPrompt, interaction.user.id);
+    const editedImageUrl = imageResult.images[0].url;
+    const modelUsed = imageResult.modelUsed;
+    const isGuild = interaction.guild !== null;
+    const imageExtension = path.extname(editedImageUrl) || '.png';
+    const attachment = new AttachmentBuilder(editedImageUrl, { name: `edited-image${imageExtension}` });
+    
+    const embed = new EmbedBuilder()
+      .setColor(hexColour)
+      .setAuthor({ name: `To ${interaction.user.displayName}`, iconURL: interaction.user.displayAvatarURL() })
+      .setDescription(`Here Is Your Edited Image\n**Edit Instructions:**\n\`\`\`${instructions.length > 3900 ? instructions.substring(0, 3900) + '...' : instructions}\`\`\``)
+      .addFields(
+        { name: '**Generated by:**', value: `\`${interaction.user.displayName}\``, inline: true },
+        { name: '**Model Used:**', value: `\`${modelUsed}\``, inline: true },
+        { name: '**AI Prompt Enhancement:**', value: `\`Enabled\``, inline: true }
+      )
+      .setImage(`attachment://edited-image${imageExtension}`)
+      .setThumbnail(imageUrl)
+      .setTimestamp();
+    
+    if (newPrompt && newPrompt.length > 0 && newPrompt !== instructions) {
+      let displayPrompt = newPrompt;
+      if (newPrompt.length > 900) {
+        displayPrompt = `${newPrompt.slice(0, 897)}...`;
+      }
+      embed.addFields({ name: '**AI Generated Prompt:**', value: `\`\`\`${displayPrompt}\`\`\``, inline: false });
+    }
+    
+    if (isGuild) {
+      embed.setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() || 'https://ai.google.dev/static/site-assets/images/share.png' });
+    }
+    
+    const messageReference = await interaction.channel.send({ 
+      content: `${interaction.user}`, 
+      embeds: [embed], 
+      files: [attachment] 
+    });
+    await addSettingsButton(messageReference);
+  } catch (error) {
+    console.error('Error editing image:', error);
+    throw error;
   }
 }
 

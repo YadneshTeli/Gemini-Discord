@@ -37,6 +37,24 @@ const commands = [
     ]
   },
   {
+    "name": "edit",
+    "description": "Edit an uploaded image using AI based on your instructions.",
+    "options": [
+      {
+        "type": 11,
+        "name": "image",
+        "description": "The image you want to edit.",
+        "required": true
+      },
+      {
+        "type": 3,
+        "name": "instructions",
+        "description": "Describe what changes you want to make to the image.",
+        "required": true
+      }
+    ]
+  },
+  {
     "name": "respond_to_all",
     "description": "Enables the bot to always respond to all messages in this channel."
   },
